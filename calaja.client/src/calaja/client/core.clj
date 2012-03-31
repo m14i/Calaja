@@ -12,9 +12,11 @@
 (def _hints (RenderingHints. RenderingHints/KEY_ANTIALIASING RenderingHints/VALUE_ANTIALIAS_ON))
 
 (defn transform [shape loc rot]
-  (let [[x y] loc
-        t (doto (AffineTransform.) (.translate x y) (.rotate rot))]
-    (.createTransformedShape t shape)))
+  (let [[x y] loc]
+    (-> (doto (AffineTransform.)
+          (.translate x y)
+          (.rotate rot))
+      (.createTransformedShape shape))))
 
 (defprotocol ISprite
   (draw [this g]))
@@ -22,16 +24,12 @@
 (defrecord Player [shape name lives shield loc rot vel]
   ISprite
   (draw [this g]
-    (let [shape (:shape this)
-          loc (:loc this)
-          rot (:rot this)
-          sprite (transform shape loc rot)]
-      (.draw g sprite))))
+    (.draw g (transform (:shape this) (:loc this) (:rot this)))))
 
 (defn mk-path [{:keys [x y]}]
   (let [points (map vector x y)
-        lines (rest points)
         [x0 y0] (map first points)
+        lines (rest points)
         path (java.awt.geom.Path2D$Double.)]
     (do
       (.moveTo path x0 y0)
@@ -59,21 +57,21 @@
     (keys KeyEvent/VK_UP) 0.0005
     :else 0))
 
-(defn accelerate [v rot value]
-  (let [[x y] v
-        dx (-> rot Math/sin - (* value))
-        dy (-> rot Math/cos (* value))]
-    [(+ x dx) (+ y dy)]))
+(defn accelerate [v rot a]
+  (let [[vx vy] v
+        dvx (-> rot Math/sin - (* a))
+        dvy (-> rot Math/cos (* a))]
+    [(+ vx dvx) (+ vy dvy)]))
 
 (defn process-keys [keys player]
   (-> player
     (update-in [:rot ] + (rotate-by keys))
     (update-in [:vel ] accelerate (:rot player) (accelerate-by keys))))
 
-(defn move [dt player]
-  (let [v (:vel player)
+(defn move [dt sprite]
+  (let [v (:vel sprite)
         ds (map (partial * dt) v)]
-    (update-in player [:loc ] #(map + ds %))))
+    (update-in sprite [:loc ] #(map + ds %))))
 
 (defn step [dt]
   (->> @_player
@@ -94,9 +92,9 @@
         (render g)))
     (keyTyped [_])
     (keyReleased [ev]
-      (swap! _keys-held #(disj % (.getKeyCode ev))))
+      (swap! _keys-held disj (.getKeyCode ev)))
     (keyPressed [ev]
-      (swap! _keys-held #(conj % (.getKeyCode ev))))
+      (swap! _keys-held conj (.getKeyCode ev)))
     (addNotify []
       (proxy-super addNotify)
       (-> (Thread. this) .start))
