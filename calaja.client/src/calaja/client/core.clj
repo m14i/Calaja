@@ -74,10 +74,9 @@
     (update-in sprite [:loc ] #(map + ds %))))
 
 (defn step [dt]
-  (->> @_player
-    (process-keys @_keys-held)
-    (move dt)
-    (reset! _player)))
+  (swap! _player #(->> %
+                    (process-keys @_keys-held)
+                    (move dt))))
 
 (defn now []
   (System/currentTimeMillis))
