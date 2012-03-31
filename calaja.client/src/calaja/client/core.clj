@@ -26,8 +26,8 @@
   (draw [this g]
     (.draw g (transform (:shape this) (:loc this) (:rot this)))))
 
-(defn mk-path [{:keys [x y]}]
-  (let [points (map vector x y)
+(defn mk-path [xs ys]
+  (let [points (map vector xs ys)
         [x0 y0] (map first points)
         lines (rest points)
         path (java.awt.geom.Path2D$Double.)]
@@ -37,9 +37,10 @@
       path)))
 
 (defn mk-ship [size]
-  (let [scale (->> 2 Math/sqrt (/ 1) (* size))]
-    (mk-path {:x (for [x [0 3 2 1 0 -1 -2 -3 0]] (* scale x))
-              :y (for [y [3 0 -1 0 -1 0 -1 0 3]] (* scale y))})))
+  (letfn [(scale [x] (->> 2 Math/sqrt (/ 1) (* size x)))]
+    (mk-path
+      (map scale [0 3 2 1 0 -1 -2 -3 0])
+      (map scale [3 0 -1 0 -1 0 -1 0 3]))))
 
 (def _player (atom (Player. (mk-ship 20) "player" 3 3 [0 0] 0 [0 0])))
 
