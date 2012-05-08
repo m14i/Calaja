@@ -11,25 +11,27 @@
 (def _hints (RenderingHints. RenderingHints/KEY_ANTIALIASING RenderingHints/VALUE_ANTIALIAS_ON))
 (def _center [(/ _width 2) (/ _height 2)])
 
-(defn transform [shape loc rot]
-  (let [[x y] loc]
+(defn transform [sprite]
+  (let [[x y] (:point sprite)
+        angle (:angle sprite)
+        shape (:shape sprite)]
     (-> (doto (AffineTransform.)
           (.translate x y)
-          (.rotate rot))
+          (.rotate angle))
       (.createTransformedShape shape))))
 
 (defprotocol ISprite
   (draw [this g]))
 
-(defrecord Bullet [shape owner loc vel]
+(defrecord Sprite [shape point angle]
   ISprite
   (draw [this g]
-    (.draw g (transform (:shape this) (:loc this) 0))))
+    (.draw g (transform this))))
 
-(defrecord Player [shape name lives shield loc rot vel]
+(defrecord Player [name sprite lvel avel energy]
   ISprite
   (draw [this g]
-    (.draw g (transform (:shape this) (:loc this) (:rot this)))))
+    (draw (:sprite this) g)))
 
 (defn mk-path [xs ys]
   (let [points (map vector xs ys)
@@ -47,8 +49,7 @@
       (map scale [0 3 2 1 0 -1 -2 -3])
       (map scale [3 0 -1 0 -1 0 -1 0]))))
 
-(def _player (atom (Player. (mk-ship 20) "player" 3 3 _center 0 [0 0])))
-(def _bullets (atom []))
+(def _player (atom (Player. "player" (Sprite. (mk-ship 20) _center 0) [0 0] 0 1)))
 
 (defn render [g]
   (draw @_player g))
@@ -64,21 +65,21 @@
     (keys KeyEvent/VK_UP) 0.0005
     :else 0))
 
-(defn accelerate [v rot a]
-  (let [[vx vy] v
-        dvx (-> rot Math/sin - (* a))
-        dvy (-> rot Math/cos (* a))]
+(defn accelerate [vel angle acc]
+  (let [[vx vy] vel
+        dvx (-> angle Math/sin - (* acc))
+        dvy (-> angle Math/cos (* acc))]
     [(+ vx dvx) (+ vy dvy)]))
 
 (defn process-keys [keys player]
   (-> player
-    (update-in [:rot ] + (rotate-by keys))
-    (update-in [:vel ] accelerate (:rot player) (accelerate-by keys))))
+    (update-in [:sprite :angle ] + (rotate-by keys))
+    (update-in [:lvel ] accelerate (-> player :sprite :angle ) (accelerate-by keys))))
 
-(defn move [dt sprite]
-  (let [v (:vel sprite)
+(defn move [dt player]
+  (let [v (:lvel player)
         ds (map (partial * dt) v)]
-    (update-in sprite [:loc ] #(map + ds %))))
+    (update-in player [:sprite :point ] #(map + ds %))))
 
 (defn step [dt]
   (swap! _player #(->> %
