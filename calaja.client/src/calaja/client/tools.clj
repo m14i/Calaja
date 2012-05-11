@@ -1,7 +1,10 @@
 (ns calaja.client.tools)
 
-(defn splat [x]
+(defn splat [x & xs]
   (do
-    ;;(println "::> " x " <::")
+    (println xs)
     x))
 
+
+(defn now []
+  (System/currentTimeMillis))

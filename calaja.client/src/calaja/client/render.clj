@@ -1,6 +1,7 @@
 (ns calaja.client.render
 
-  (:use [calaja.client.game])
+  (:use [calaja.client.game]
+        [calaja.client.tools])
 
   ;; using records needs require AND import
   (:require [calaja.client.game])
@@ -14,8 +15,10 @@
 (extend-type Element
   ISprite
   (draw [this g]
-    (let [{:keys [shape point angle]} this]
-      (.draw g (transform shape point angle)))))
+    (let [{:keys [shape point angle]} this
+          transformed-shape (-> this :shape )]
+      (splat nil "before draw: " transformed-shape)
+      (.draw g transformed-shape))))
 
 
 (extend-type Player
