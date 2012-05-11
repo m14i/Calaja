@@ -1,26 +1,24 @@
 (ns calaja.client.render
-  (:use calaja.client.game))
 
-(defn transform [sprite]
-  (let [[x y] (:point sprite)
-        angle (:angle sprite)
-        shape (:shape sprite)]
-    (-> (doto (AffineTransform.)
-          (.translate x y)
-          (.rotate angle))
-      (.createTransformedShape shape))))
+  (:use [calaja.client.game])
+
+  ;; using records needs require AND import
+  (:require [calaja.client.game])
+  (:import [calaja.client.game Element Player]))
+
 
 (defprotocol ISprite
   (draw [this g]))
 
-(extend Element
+
+(extend-type Element
   ISprite
   (draw [this g]
-    (.draw g (transform this))))
+    (let [{:keys [shape point angle]} this]
+      (.draw g (transform shape point angle)))))
 
-(extend Player
+
+(extend-type Player
   ISprite
   (draw [this g]
-    (draw (:element this) g)))
-
-
+    (update-in this [:element ] draw g)))

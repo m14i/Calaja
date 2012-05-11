@@ -1,13 +1,35 @@
-(ns calaja.client.game)
+(ns calaja.client.game
 
-(defrecord Element [point angle velocity spin shape])
+  (:use [calaja.client.tools])
 
-(defrecord Player [name energy element])
+  (:import [java.awt.geom AffineTransform Path2D]))
+
+
+(def TWO_PI (* 2 Math/PI))
+
 
 (defprotocol IMove
   (move [this dt]))
 
-(defn mk-path [xs ys]
+
+(defrecord Game [players])
+
+
+(defrecord Element [point angle velocity spin shape])
+
+
+(defrecord Player [name energy element])
+
+
+(defn transform [shape point angle]
+  (let [[x y] point]
+    (-> (doto (AffineTransform.)
+          (.translate x y)
+          (.rotate angle))
+      (.createTransformedShape shape))))
+
+
+(defn path [xs ys]
   (let [points (map vector xs ys)
         [x0 y0] (map first points)
         lines (rest points)
@@ -17,38 +39,50 @@
     (.closePath path)
     path))
 
-(defn mk-ship [size]
+
+(defn ship [size]
   (letfn [(scale [x] (->> 2 Math/sqrt (/ 1) (* size x)))]
-    (mk-path
+    (path
       (map scale [0 3 2 1 0 -1 -2 -3])
       (map scale [3 0 -1 0 -1 0 -1 0]))))
 
-(defn mk-player [name energy point]
-  (Player. name energy (Element. point 0 0 0 (mkShip 20))))
 
-(defn accelerate [dt point angle velocity]
-  (let [dv (* dt velocity)
-        ds [(-> angle Math/sin - (* dv))
-            (-> angle Math/cos (* dv))]]
-    (map + point ds)))
-
-(defn rotate [dt angle spin]
-  (+ angle (* dt spin)))
+(defn player [name energy point]
+  (Player. name energy (Element. point 0 0 0 (ship 20))))
 
 
+(defn accelerate
+
+  ([element dt]
+    (let [{:keys [point angle velocity]} element]
+      (update-in element [:point ] accelerate angle velocity dt)))
+
+  ([point angle velocity dt]
+    (let [dv (* dt velocity)
+          ds [(-> angle Math/sin - (* dv))
+              (-> angle Math/cos (* dv))]]
+      (map + point ds))))
 
 
+(defn rotate
 
-(extend Element
+  ([element dt]
+    (let [{:keys [angle spin]} element]
+      (splat element)
+      (update-in element [:angle ] rotate spin dt)))
+
+  ([angle spin dt]
+    (-> spin (* dt) (+ angle) (rem TWO_PI))))
+
+
+(extend-type Element
   IMove
   (move [this dt]
-    (let [da (rotate dt (:angle this) (:spin this))
-          dx (accelerate dt (:angle this) (:velocity this) (:point this))
-          x (map + (:point this) dx)
-          a (+ (:angle this) da)]
-      (merge this {:point x :angle a}))))
+    (-> this (rotate dt) (accelerate dt))))
 
-(extend Player
+
+(extend-type Player
   IMove
   (move [this dt]
-    (move (:element this))))
+    (update-in this [:element ] move dt)))
+
