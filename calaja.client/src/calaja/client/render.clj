@@ -15,13 +15,10 @@
 (extend-type Element
   ISprite
   (draw [this g]
-    (let [{:keys [shape point angle]} this
-          transformed-shape (-> this :shape )]
-      (splat nil "before draw: " transformed-shape)
-      (.draw g transformed-shape))))
+    (.draw g (:tshape this))))
 
 
 (extend-type Player
   ISprite
   (draw [this g]
-    (update-in this [:element ] draw g)))
+    (draw (:element this) g)))

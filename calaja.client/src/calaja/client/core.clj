@@ -13,7 +13,7 @@
 
 (def game-height 800)
 (def game-width 800)
-(def game-rectangle (Rectangle. 0 0 game-width game-height))
+(def game-box (Rectangle. 0 0 game-width game-height))
 (def game-center [(/ game-width 2) (/ game-height 2)])
 (def game-rendering-hints (RenderingHints.
                             RenderingHints/KEY_ANTIALIASING
@@ -28,7 +28,7 @@
                            :right KeyEvent/VK_D}})
 
 
-(def game-delay (atom 2000))
+(def game-delay (atom 20))
 (def keys-held (atom #{}))
 (def players [(atom (new-player :one 1 game-center))
               (atom (new-player :two 1 (map + game-center [100 100])))])
@@ -66,22 +66,19 @@
     (draw @p g)))
 
 
-(defn on-canvas? [element]
-  (let [bbox (.getBounds (:shape element))]
-    (splat nil bbox game-rectangle)
-    (.contains game-rectangle bbox)))
+(defn on-canvas? [shape]
+  (let [bbox (.getBounds shape)]
+    ;(splat nil bbox game-rectangle)
+    (.contains game-box bbox)))
 
 
 (defn step [dt]
   (do
     (swap! game-delay (process-delay-keys @keys-held))
     (doseq [p players]
-      (swap! p #(let [p0 (process-player-keys % @keys-held)
-                      p1 (move p0 dt)]
-                  ;(if (on-canvas? (:element p1))
-                  p1
-                  ;(move p0 (- dt))
-                  )))))
+      (swap! p #(-> %
+                  (process-player-keys @keys-held)
+                  (move [game-width game-height] dt))))))
 
 
 (defn new-canvas []

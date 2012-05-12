@@ -7,11 +7,9 @@
 
 (def pi-2 (* 2 Math/PI))
 
-(defprotocol IMove (move [this dt]))
-
 (defrecord Game [players])
 
-(defrecord Element [point angle velocity spin shape ])
+(defrecord Element [point angle velocity spin shape tshape])
 
 (defrecord Player [name energy element])
 
@@ -41,7 +39,8 @@
 
 
 (defn new-player [name energy point]
-  (Player. name energy (Element. point 0 0 0 (new-ship 10))))
+  (let [shape (new-ship 10)]
+    (Player. name energy (Element. point 0 0 0 shape shape))))
 
 
 (defn accelerate
@@ -70,9 +69,10 @@
 (defn transform
 
   ([element]
-    (let [{:keys [point angle]} element
-          result (update-in element [:shape ] transform point angle)]
-      (splat result "after transform: " (:shape result))))
+    (let [{:keys [shape point angle]} element
+          result (transform shape point angle)]
+      ;(splat result "after transform: " result)
+      (assoc-in element [:tshape ] result)))
 
   ([shape point angle]
     (let [[x y] point
@@ -83,15 +83,31 @@
       result)))
 
 
+(defmulti wrap (fn [x xmax] (class x)))
+
+(defmethod wrap Element [x xmax]
+  (update-in x [:point ] #(mapv wrap % xmax)))
+
+(defmethod wrap :default [x xmax]
+  (-> x (rem xmax) (+ xmax) (rem xmax)))
+
+
+(defprotocol IMove
+  (move [this limits dt]))
+
+
 (extend-type Element
   IMove
-  (move [this dt]
-    (-> this (rotate dt) (accelerate dt) (transform)
-      )))
+  (move [this limits dt]
+    (-> this
+      (rotate dt)
+      (accelerate dt)
+      (wrap limits)
+      (transform))))
 
 
 (extend-type Player
   IMove
-  (move [this dt]
-    (update-in this [:element ] move dt)))
+  (move [this limits dt]
+    (update-in this [:element ] move limits dt)))
 
