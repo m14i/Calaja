@@ -2,7 +2,7 @@
 
   (:use [calaja.client.tools])
 
-  (:import [java.awt.geom AffineTransform Path2D]))
+  (:import [java.awt.geom AffineTransform Path2D Ellipse2D]))
 
 
 (def pi-2 (* 2 Math/PI))
@@ -11,7 +11,14 @@
 
 (defrecord Element [point angle velocity thrust spin shape tshape])
 
-(defrecord Player [name energy element])
+(defrecord Player [name energy shoot element])
+
+(defrecord Bullet [player energy alive element])
+
+
+(defn to-cartesian [magnitude angle]
+  [(-> angle Math/sin - (* magnitude))
+   (-> angle Math/cos (* magnitude))])
 
 
 (defn new-path [xs ys]
@@ -32,14 +39,21 @@
       (map scale [2 -1 -2 -1 -2 -1 -2 -1]))))
 
 
+(defn new-bullet [player]
+  (let [element (:element player)
+        v (to-cartesian 1 (:angle element))
+        source (mapv #(* 30 %) v)
+        [x y] (mapv + source (:point element))
+        circle (java.awt.geom.Ellipse2D$Float. 0 0 5 5)]
+    (Bullet. player 1 1000 (Element. [x y] 0 v 0 0 circle circle))))
+
+
 (defn new-player [name energy point]
   (let [shape (new-ship 10)]
-    (Player. name energy (Element. point 0 [0 0] 0 0 shape shape))))
+    (Player. name energy false (Element. point 0 [0 0] 0 0 shape shape))))
 
 
-(defn to-cartesian [magnitude angle]
-  [(-> angle Math/sin - (* magnitude))
-   (-> angle Math/cos (* magnitude))])
+
 
 
 (defn accelerate
@@ -69,7 +83,6 @@
   ([element]
     (let [{:keys [shape point angle]} element
           result (transform shape point angle)]
-      ;(splat result "after transform: " result)
       (assoc-in element [:tshape ] result)))
 
   ([shape point angle]
@@ -104,6 +117,9 @@
 (defprotocol IMove
   (move [this limits dt]))
 
+(defprotocol IShoot
+  (shoot [this]))
+
 
 (extend-type Element
   IMove
@@ -116,8 +132,18 @@
       (transform))))
 
 
-(extend-type Player
+(extend-type Bullet
   IMove
   (move [this limits dt]
     (update-in this [:element ] move limits dt)))
+
+
+(extend-type Player
+  IMove
+  (move [this limits dt]
+    (update-in this [:element ] move limits dt))
+
+  IShoot
+  (shoot [this]
+    (new-bullet this)))
 

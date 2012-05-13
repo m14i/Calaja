@@ -21,17 +21,20 @@
 
 (def player-actions {:one {:thrust KeyEvent/VK_UP
                            :left KeyEvent/VK_LEFT
-                           :right KeyEvent/VK_RIGHT}
+                           :right KeyEvent/VK_RIGHT
+                           :shoot KeyEvent/VK_DOWN}
 
                      :two {:thrust KeyEvent/VK_W
                            :left KeyEvent/VK_A
-                           :right KeyEvent/VK_D}})
+                           :right KeyEvent/VK_D
+                           :shoot KeyEvent/VK_S}})
 
 
 (def game-delay (atom 20))
 (def keys-held (atom #{}))
-(def players [(atom (new-player :one 1 game-center))
-              (atom (new-player :two 1 (map + game-center [100 100])))])
+(def bullets (atom []))
+(def players (atom [(new-player :one 1 game-center)
+                    (new-player :two 1 (map + game-center [100 100]))]))
 
 
 (defn rotate-by [keys actions]
@@ -47,11 +50,18 @@
     :else 0))
 
 
+(defn shoot-by [keys actions]
+  (cond
+    (keys (:shoot actions)) true
+    :else false))
+
+
 (defn process-player-keys [player keys]
   (let [actions (player-actions (:name player))]
     (-> player
       (assoc-in [:element :spin ] (rotate-by keys actions))
-      (assoc-in [:element :thrust ] (accelerate-by keys actions)))))
+      (assoc-in [:element :thrust ] (accelerate-by keys actions))
+      (assoc-in [:shoot ] (shoot-by keys actions)))))
 
 
 (defn process-delay-keys [keys]
@@ -62,17 +72,51 @@
 
 
 (defn render [g]
-  (doseq [p players]
-    (draw @p g)))
+  (doseq [p @players]
+    (draw p g))
+
+  (doseq [b @bullets]
+    (draw b g)))
+
+
+(defn get-bbox [has-element]
+  (.getBounds (-> has-element :element :tshape )))
+
+(defn process-hit [player bullets]
+  (let [pbox (get-bbox player)
+        bboxes (map get-bbox bullets)]
+    (if (some #(.intersects pbox %) bboxes)
+      (update-in player [:energy ] dec)
+      player)))
 
 
 (defn step [dt]
-  (do
+  (letfn [(step-player [p]
+            (-> p
+              (process-player-keys @keys-held)
+              (move game-bounds dt)
+              (process-hit @bullets)))
+
+          (add-bullets [bs p]
+            (if (:shoot p)
+              (conj bs (shoot p))
+              bs))
+
+          (step-bullet [b]
+            (-> b
+              (move game-bounds dt)
+              (update-in [:alive ] #(- % dt))))
+
+          (bullet-alive? [b]
+            (< 0 (:alive b)))]
+
     (swap! game-delay (process-delay-keys @keys-held))
-    (doseq [p players]
-      (swap! p #(-> %
-                  (process-player-keys @keys-held)
-                  (move game-bounds dt))))))
+
+    (swap! players #(map step-player %))
+
+    (swap! bullets #(->> % (filter bullet-alive?) (map step-bullet)))
+
+    (swap! bullets #(reduce add-bullets % @players))))
 
 
 (defn new-canvas []

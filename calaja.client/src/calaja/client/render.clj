@@ -5,7 +5,7 @@
 
   ;; using records needs require AND import
   (:require [calaja.client.game])
-  (:import [calaja.client.game Element Player]
+  (:import [calaja.client.game Element Player Bullet]
            [java.awt Font]))
 
 
@@ -17,6 +17,12 @@
   ISprite
   (draw [this g]
     (.draw g (:tshape this))))
+
+
+(extend-type Bullet
+  ISprite
+  (draw [this g]
+    (draw (:element this) g)))
 
 
 (extend-type Player
