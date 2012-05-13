@@ -8,12 +8,12 @@
            [java.awt.event KeyListener KeyEvent]
            [java.awt.geom AffineTransform Path2D]
            [java.awt Rectangle]
-           [javax.swing JFrame]))
+           [javax.swing JFrame SwingUtilities]))
 
 
 (def game-height 800)
 (def game-width 800)
-(def game-box (Rectangle. 0 0 game-width game-height))
+(def game-bounds [game-width game-height])
 (def game-center [(/ game-width 2) (/ game-height 2)])
 (def game-rendering-hints (RenderingHints.
                             RenderingHints/KEY_ANTIALIASING
@@ -36,8 +36,8 @@
 
 (defn rotate-by [keys actions]
   (cond
-    (keys (:left actions)) -0.0001
-    (keys (:right actions)) 0.0001
+    (keys (:left actions)) -0.01
+    (keys (:right actions)) 0.01
     :else 0))
 
 
@@ -50,8 +50,8 @@
 (defn process-player-keys [player keys]
   (let [actions (player-actions (:name player))]
     (-> player
-      (update-in [:element :spin ] + (rotate-by keys actions))
-      (update-in [:element :velocity ] + (accelerate-by keys actions)))))
+      (assoc-in [:element :spin ] (rotate-by keys actions))
+      (assoc-in [:element :thrust ] (accelerate-by keys actions)))))
 
 
 (defn process-delay-keys [keys]
@@ -66,19 +66,13 @@
     (draw @p g)))
 
 
-(defn on-canvas? [shape]
-  (let [bbox (.getBounds shape)]
-    ;(splat nil bbox game-rectangle)
-    (.contains game-box bbox)))
-
-
 (defn step [dt]
   (do
     (swap! game-delay (process-delay-keys @keys-held))
     (doseq [p players]
       (swap! p #(-> %
                   (process-player-keys @keys-held)
-                  (move [game-width game-height] dt))))))
+                  (move game-bounds dt))))))
 
 
 (defn new-canvas []
@@ -125,6 +119,6 @@
 
 
 (defn -main [& args]
-  (start-game))
+  (SwingUtilities/invokeLater start-game))
 
 

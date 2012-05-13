@@ -9,15 +9,9 @@
 
 (defrecord Game [players])
 
-(defrecord Element [point angle velocity spin shape tshape])
+(defrecord Element [point angle velocity thrust spin shape tshape])
 
 (defrecord Player [name energy element])
-
-
-(defn collision? [shape1 shape2]
-  (let [bbox1 (.getBounds shape1)
-        bbox2 (.getBounds shape2)]
-    (.intersects bbox1 bbox2)))
 
 
 (defn new-path [xs ys]
@@ -35,25 +29,29 @@
   (letfn [(scale [x] (->> 2 Math/sqrt (/ 1) (* size x)))]
     (new-path
       (map scale [0 3 2 1 0 -1 -2 -3])
-      (map scale [3 0 -1 0 -1 0 -1 0]))))
+      (map scale [2 -1 -2 -1 -2 -1 -2 -1]))))
 
 
 (defn new-player [name energy point]
   (let [shape (new-ship 10)]
-    (Player. name energy (Element. point 0 0 0 shape shape))))
+    (Player. name energy (Element. point 0 [0 0] 0 0 shape shape))))
+
+
+(defn to-cartesian [magnitude angle]
+  [(-> angle Math/sin - (* magnitude))
+   (-> angle Math/cos (* magnitude))])
 
 
 (defn accelerate
 
   ([element dt]
-    (let [{:keys [point angle velocity]} element]
-      (update-in element [:point ] accelerate angle velocity dt)))
+    (let [{:keys [velocity angle thrust]} element]
+      (update-in element [:velocity ] accelerate angle thrust dt)))
 
-  ([point angle velocity dt]
-    (let [dv (* dt velocity)
-          ds [(-> angle Math/sin - (* dv))
-              (-> angle Math/cos (* dv))]]
-      (map + point ds))))
+  ([velocity angle thrust dt]
+    (let [dv (* dt thrust)
+          ds (to-cartesian dv angle)]
+      (map + velocity ds))))
 
 
 (defn rotate
@@ -92,17 +90,29 @@
   (-> x (rem xmax) (+ xmax) (rem xmax)))
 
 
+(defn translate
+
+  ([element dt]
+    (let [{:keys [point velocity]} element]
+      (update-in element [:point ] translate velocity dt)))
+
+  ([point velocity dt]
+    (let [step (map #(* % dt) velocity)]
+      (map + point step))))
+
+
 (defprotocol IMove
   (move [this limits dt]))
 
 
 (extend-type Element
   IMove
-  (move [this limits dt]
+  (move [this bounds dt]
     (-> this
       (rotate dt)
       (accelerate dt)
-      (wrap limits)
+      (translate dt)
+      (wrap bounds)
       (transform))))
 
 
