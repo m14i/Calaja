@@ -112,12 +112,11 @@
       (assoc-in element [:tshape ] result)))
 
   ([shape point angle]
-    (let [[x y]   point
-          result  (-> (doto (AffineTransform.)
-                            (.translate x y)
-                            (.rotate angle))
-                            (.createTransformedShape shape))]
-      result)))
+    (let [[x y] point]
+      (-> (doto (AffineTransform.)
+                (.translate x y)
+                (.rotate angle))
+        (.createTransformedShape shape)))))
 
 
 (defmulti wrap (fn [x xmax] (class x)))

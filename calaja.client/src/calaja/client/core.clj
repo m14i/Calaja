@@ -20,10 +20,10 @@
                             RenderingHints/KEY_ANTIALIASING
                             RenderingHints/VALUE_ANTIALIAS_ON))
 
-(def key-actions {:one {KeyEvent/VK_UP :thrust
-                        KeyEvent/VK_LEFT :left
+(def key-actions {:one {KeyEvent/VK_UP    :thrust
+                        KeyEvent/VK_LEFT  :left
                         KeyEvent/VK_RIGHT :right
-                        KeyEvent/VK_DOWN :shoot}
+                        KeyEvent/VK_DOWN  :shoot}
 
                   :two {KeyEvent/VK_W :thrust
                         KeyEvent/VK_A :left
@@ -84,7 +84,7 @@
 
     (addNotify []
       (proxy-super addNotify)
-      (-> (Thread. this) .start))
+      (.start (Thread. this)))
 
     (run []
       (loop [ti (now)]
