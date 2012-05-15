@@ -7,8 +7,6 @@
 
 (def pi-2 (* 2 Math/PI))
 
-(defrecord Game [players])
-
 (defrecord Element [point angle velocity thrust spin shape tshape])
 
 (defrecord Player [name energy shoot actions element])
@@ -66,19 +64,18 @@
 
 
 (defn update-player [player actions]
-  (let [p (-> player
-              (assoc-in [:element :spin ] 0)
-              (assoc-in [:element :thrust ] 0)
-              (assoc-in [:shoot ] false))]
-    (reduce
-      #(case %2
-         :shoot   (assoc-in %1 [:shoot ] true)
-         :thrust  (assoc-in %1 [:element :thrust ] 0.0005)
-         :right   (assoc-in %1 [:element :spin ] 0.01)
-         :left    (assoc-in %1 [:element :spin ] -0.01)
-         %1)
-      p
-      actions)))
+  (reduce
+    #(case %2
+       :shoot   (assoc-in %1 [:shoot ] true)
+       :thrust  (assoc-in %1 [:element :thrust ] 0.0005)
+       :right   (assoc-in %1 [:element :spin ] 0.01)
+       :left    (assoc-in %1 [:element :spin ] -0.01)
+       %1)
+    (-> player
+      (assoc-in [:element :spin ] 0)
+      (assoc-in [:element :thrust ] 0)
+      (assoc-in [:shoot ] false))
+    actions))
 
 
 (defn bullet-alive? [b]
