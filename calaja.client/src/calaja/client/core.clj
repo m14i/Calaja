@@ -101,12 +101,13 @@
 
 
 (defn start-game []
-  (doto (new-canvas)
-        (.setFocusable true)
-        (.addKeyListener canvas)
-        (.setSize game-width game-height)
-        (.setVisible true)
-        (.createBufferStrategy 2)))
+  (let [canvas (new-canvas)]
+    (doto canvas
+          (.setFocusable true)
+          (.addKeyListener canvas)
+          (.setSize game-width game-height)
+          (.setVisible true)
+          (.createBufferStrategy 2))))
 
 
 (defn -main [& args]
