@@ -2,7 +2,8 @@
 
   (:use [calaja.client.game]
         [calaja.client.render]
-        [calaja.client.tools])
+        [calaja.client.tools]
+        [clojure.set])
 
   (:import [java.awt RenderingHints Color BasicStroke Toolkit]
            [java.awt.event KeyListener KeyEvent]
@@ -19,49 +20,27 @@
                             RenderingHints/KEY_ANTIALIASING
                             RenderingHints/VALUE_ANTIALIAS_ON))
 
-(def player-actions {:one {:thrust KeyEvent/VK_UP
-                           :left KeyEvent/VK_LEFT
-                           :right KeyEvent/VK_RIGHT
-                           :shoot KeyEvent/VK_DOWN}
+(def key-actions {:one {KeyEvent/VK_UP :thrust
+                        KeyEvent/VK_LEFT :left
+                        KeyEvent/VK_RIGHT :right
+                        KeyEvent/VK_DOWN :shoot}
 
-                     :two {:thrust KeyEvent/VK_W
-                           :left KeyEvent/VK_A
-                           :right KeyEvent/VK_D
-                           :shoot KeyEvent/VK_S}})
+                  :two {KeyEvent/VK_W :thrust
+                        KeyEvent/VK_A :left
+                        KeyEvent/VK_D :right
+                        KeyEvent/VK_S :shoot}})
 
 
 (def game-delay (atom 20))
-(def keys-held (atom #{}))
-(def bullets (atom []))
-(def players (atom [(new-player :one 1 game-center)
-                    (new-player :two 1 (map + game-center [100 100]))]))
+(def keys-held  (atom #{}))
+(def bullets    (atom []))
+(def players    (atom [(new-player :one 1 game-center)
+                       (new-player :two 1 (map + game-center [100 100]))]))
 
 
-(defn rotate-by [keys actions]
-  (cond
-    (keys (:left actions)) -0.01
-    (keys (:right actions)) 0.01
-    :else 0))
-
-
-(defn accelerate-by [keys actions]
-  (cond
-    (keys (:thrust actions)) 0.0005
-    :else 0))
-
-
-(defn shoot-by [keys actions]
-  (cond
-    (keys (:shoot actions)) true
-    :else false))
-
-
-(defn process-player-keys [player keys]
-  (let [actions (player-actions (:name player))]
-    (-> player
-      (assoc-in [:element :spin ] (rotate-by keys actions))
-      (assoc-in [:element :thrust ] (accelerate-by keys actions))
-      (assoc-in [:shoot ] (shoot-by keys actions)))))
+(defn get-actions [player key-events]
+  (let [events (-> player :name key-actions)]
+    (->> events keys set (intersection key-events) (map events))))
 
 
 (defn process-delay-keys [keys]
@@ -79,44 +58,11 @@
     (draw b g)))
 
 
-(defn get-bbox [has-element]
-  (.getBounds (-> has-element :element :tshape )))
-
-(defn process-hit [player bullets]
-  (let [pbox (get-bbox player)
-        bboxes (map get-bbox bullets)]
-    (if (some #(.intersects pbox %) bboxes)
-      (update-in player [:energy ] dec)
-      player)))
-
-
 (defn step [dt]
-  (letfn [(step-player [p]
-            (-> p
-              (process-player-keys @keys-held)
-              (move game-bounds dt)
-              (process-hit @bullets)))
-
-          (add-bullets [bs p]
-            (if (:shoot p)
-              (conj bs (shoot p))
-              bs))
-
-          (step-bullet [b]
-            (-> b
-              (move game-bounds dt)
-              (update-in [:alive ] #(- % dt))))
-
-          (bullet-alive? [b]
-            (< 0 (:alive b)))]
-
+  (let [actions (map #(get-actions % @keys-held) @players)]
     (swap! game-delay (process-delay-keys @keys-held))
-
-    (swap! players #(map step-player %))
-
-    (swap! bullets #(->> % (filter bullet-alive?) (map step-bullet)))
-
-    (swap! bullets #(reduce add-bullets % @players))))
+    (swap! players step-players @bullets actions game-bounds dt)
+    (swap! bullets step-bullets @players game-bounds dt)))
 
 
 (defn new-canvas []
@@ -144,22 +90,23 @@
       (loop [ti (now)]
         (let [tj (now)
               dt (- tj ti)]
-          (step dt)
+          (try
+            (step dt)
+            (catch Exception e (.printStackTrace e)))
           (.repaint this)
           (let [elapsed (- (now) ti)
-                sleep (max 2 (- @game-delay elapsed))]
+                sleep   (max 2 (- @game-delay elapsed))]
             (Thread/sleep sleep)
             (recur tj)))))))
 
 
 (defn start-game []
-  (let [canvas (new-canvas)]
-    (doto canvas
-      (.setFocusable true)
-      (.addKeyListener canvas)
-      (.setSize game-width game-height)
-      (.setVisible true)
-      (.createBufferStrategy 2))))
+  (doto (new-canvas)
+        (.setFocusable true)
+        (.addKeyListener canvas)
+        (.setSize game-width game-height)
+        (.setVisible true)
+        (.createBufferStrategy 2)))
 
 
 (defn -main [& args]
