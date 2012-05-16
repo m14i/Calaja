@@ -1,11 +1,7 @@
 (ns calaja.client.render
-
-  (:use [calaja.client.game]
-        [calaja.client.tools])
-
-  ;; using records needs require AND import
-  (:require [calaja.client.game])
-  (:import [calaja.client.game Element Player Bullet]
+  (:use [calaja.client.functions])
+  (:require [calaja.client.model])
+  (:import [calaja.client.model Element Player Bullet]
            [java.awt Font]))
 
 
