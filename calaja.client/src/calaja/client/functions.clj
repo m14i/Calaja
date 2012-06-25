@@ -20,12 +20,19 @@
   (.getBounds (-> has-element :element :tshape )))
 
 
-(defn process-hit [player bullets]
+(defn hit? [player bullet]
   (let [pbox (get-bbox player)
-        bboxes (map get-bbox bullets)]
-    (if (some #(.intersects pbox %) bboxes)
-      (update-in player [:energy ] dec)
-      player)))
+        bbox (get-bbox bullet)]
+    (.intersects pbox bbox)))
+
+
+(defn process-hit [player bullets]
+  (let [hits (map #(if (hit? player %) (update-in % [:alive ] dec) %) bullets)
+        num-hits (reduce 0 #(if (-> %2 :alive zero?) (inc %1) %1) hits)]
+    [(if (zero? num-hits)
+       player
+       (update-in player [:energy ] #(- % num-hits)))
+     hits]))
 
 
 (defn update-player [player actions]

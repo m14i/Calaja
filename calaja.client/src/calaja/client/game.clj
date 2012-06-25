@@ -66,6 +66,7 @@
 
 
 (defn step-game [game actions dt]
-  (let [{:keys [bounds players bullets]} game]
-    (swap! players step-players @bullets actions bounds dt)
-    (swap! bullets step-bullets @players bounds dt)))
+  (let [{:keys [bounds players bullets]} game
+        [players bulletsn] (step-players @players @bullets actions bounds dt)]
+    (swap! players #(do % players))
+    (swap! bulletsn step-bullets @players bounds dt)))
