@@ -1,20 +1,30 @@
 (ns calaja.client.core
+
   (:use [calaja.client.game]
         [calaja.client.render]
+        [calaja.client.tools]
         [clojure.set])
-  (:import [java.awt RenderingHints]
+
+  (:import [java.awt RenderingHints Color BasicStroke Toolkit]
            [java.awt.event KeyListener KeyEvent]
+           [java.awt.geom AffineTransform Path2D]
+           [java.awt Rectangle]
            [javax.swing JFrame SwingUtilities]))
 
 
-(def rendering-hints (RenderingHints.
-                       RenderingHints/KEY_ANTIALIASING
-                       RenderingHints/VALUE_ANTIALIAS_ON))
+(def game-height 800)
+(def game-width 800)
+(def game-bounds [game-width game-height])
+(def game-center [(/ game-width 2) (/ game-height 2)])
+(def game-rendering-hints (RenderingHints.
+                            RenderingHints/KEY_ANTIALIASING
+                            RenderingHints/VALUE_ANTIALIAS_ON))
 
 (def key-actions {:one {KeyEvent/VK_UP    :thrust
                         KeyEvent/VK_LEFT  :left
                         KeyEvent/VK_RIGHT :right
                         KeyEvent/VK_DOWN  :shoot}
+
                   :two {KeyEvent/VK_W :thrust
                         KeyEvent/VK_A :left
                         KeyEvent/VK_D :right
@@ -23,12 +33,9 @@
 
 (def game-delay (atom 20))
 (def keys-held  (atom #{}))
-
-(def game (new-game [800 800]))
-
-
-(defn now []
-  (System/currentTimeMillis))
+(def bullets    (atom []))
+(def players    (atom [(new-player :one 1 game-center)
+                       (new-player :two 1 (map + game-center [100 100]))]))
 
 
 (defn get-actions [player key-events]
@@ -44,14 +51,18 @@
 
 
 (defn render [g]
-  (doseq [p @(:players game)] (draw p g))
-  (doseq [b @(:bullets game)] (draw b g)))
+  (doseq [p @players]
+    (draw p g))
+
+  (doseq [b @bullets]
+    (draw b g)))
 
 
 (defn step [dt]
-  (let [actions (map #(get-actions % @keys-held) @(:players game))]
+  (let [actions (map #(get-actions % @keys-held) @players)]
     (swap! game-delay (process-delay-keys @keys-held))
-    (step-game game actions dt)))
+    (swap! players step-players @bullets actions game-bounds dt)
+    (swap! bullets step-bullets @players game-bounds dt)))
 
 
 (defn new-canvas []
@@ -60,7 +71,7 @@
 
     (paint [g]
       (proxy-super paint g)
-      (.setRenderingHints g rendering-hints)
+      (.setRenderingHints g game-rendering-hints)
       (render g))
 
     (keyTyped [_])
@@ -90,15 +101,16 @@
 
 
 (defn start-game []
-  (let [canvas (new-canvas)
-        [width height] (:bounds game)]
+  (let [canvas (new-canvas)]
     (doto canvas
           (.setFocusable true)
           (.addKeyListener canvas)
-          (.setSize width height)
+          (.setSize game-width game-height)
           (.setVisible true)
           (.createBufferStrategy 2))))
 
 
 (defn -main [& args]
   (SwingUtilities/invokeLater start-game))
+
+
