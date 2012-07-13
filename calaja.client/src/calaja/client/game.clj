@@ -59,6 +59,7 @@
   (vec (concat
          (->> bullets
            (filter #(< 0 (:alive %)))
+           (filter #(< 0 (:energy %)))
            (map #(move (update-in % [:alive ] - dt) bounds dt)))
          (->> players
            (filter :shoot )
@@ -69,3 +70,47 @@
   (let [{:keys [bounds players bullets]} game]
     (swap! players step-players @bullets actions bounds dt)
     (swap! bullets step-bullets @players bounds dt)))
+
+;(defn process-hit [player bullets]
+;  (let [pbox (get-bbox player)
+;        bboxes (map get-bbox bullets)]
+;    (if (some #(.intersects pbox %) bboxes)
+;      (update-in player [:energy ] dec)
+;      player)))
+
+;; move players
+;; move bullets
+;; check interactions
+
+
+(defn interact [player bullet]
+  (if (and
+        (< 0 (:alive bullet))
+        (< 0 (:energy bullet)))
+    (let [pbox (get-bbox player)
+          bbox (get-bbox bullet)]
+      (if (.intersects pbox bbox)
+        [(update-in player [:energy ] dec)
+         (update-in bullet [:energy ] dec)]
+        [player bullet]))
+    [player bullet]))
+
+
+(defn apply-in [fn ks & m]
+  (reduce fn (map #(get-in % ks) m)))
+
+
+(defn bla [player bullets]
+  (let [res (map interact (repeat player) bullets)]
+    [(min-key :energy (map first res)) (mapv second res)]))
+
+
+
+
+
+
+
+
+
+
+

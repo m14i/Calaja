@@ -4,5 +4,3 @@
 (defrecord Player   [name energy shoot actions element])
 (defrecord Bullet   [player energy alive element])
 (defrecord Game     [bounds players bullets])
-
-
