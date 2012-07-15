@@ -40,10 +40,11 @@
 
 
 (defn new-game [bounds]
-  (let [bullets (atom [])
-        players (atom [(new-player :one 1 (mapv #(/ % 2) bounds))
-                       (new-player :two 1 (mapv #(-> % (/ 2) (+ 100)) bounds))])]
+  (let [bullets (ref [])
+        players (ref [(new-player :one 1 (mapv #(/ % 2) bounds))
+                      (new-player :two 1 (mapv #(-> % (/ 2) (+ 100)) bounds))])]
     (Game. bounds players bullets)))
+
 
 (defn process-hit [player bullets]
   (let [pbox (get-bbox player)
@@ -51,38 +52,6 @@
     (if (some #(.intersects pbox %) bboxes)
       (update-in player [:energy ] dec)
       player)))
-
-
-(defn step-players [players bullets actions bounds dt]
-  (map #(let [[p a] %]
-          (-> p
-            (update-player a)
-            (move bounds dt)
-            ;(process-hit bullets)
-            ))
-    (map vector players actions)))
-
-
-(defn step-bullets [bullets players bounds dt]
-  (vec (concat
-         (->> bullets
-           (filter #(< 0 (:alive %)))
-           (filter #(< 0 (:energy %)))
-           (map #(move (update-in % [:alive ] - dt) bounds dt)))
-         (->> players
-           (filter :shoot )
-           (map shoot)))))
-
-
-(defn step-game [game actions dt]
-  (let [{:keys [bounds players bullets]} game]
-    (swap! players step-players @bullets actions bounds dt)
-    (swap! bullets step-bullets @players bounds dt)))
-
-
-;; move players
-;; move bullets
-;; check interactions
 
 
 (defn interact [player bullet]
@@ -111,6 +80,44 @@
   (let [res (mapcat #(bla % bullets) players)
         bs (map rest res)]
     [(map first res) (map #(apply min-key :energy %) (apply map vector bs))]))
+
+
+(defn step-players [players bullets actions bounds dt]
+  (map #(let [[p a] %]
+          (-> p
+            (update-player a)
+            (move bounds dt)
+            ;(process-hit bullets)
+            ))
+    (map vector players actions)))
+
+
+(defn step-bullets [bullets players bounds dt]
+  (vec (concat
+         (->> bullets
+           (filter #(< 0 (:alive %)))
+           (filter #(< 0 (:energy %)))
+           (map #(move (update-in % [:alive ] - dt) bounds dt)))
+         (->> players
+           (filter :shoot )
+           (map shoot)))))
+
+
+(defn step-game [game actions dt]
+  (let [{:keys [bounds players bullets]} game
+        ps (step-players players @bullets actions bounds dt)
+        bs (step-bullets bullets @players bounds dt)
+        [pn bn] (step-interactions ps bs)]
+
+    (dosync
+      (ref-set players pn)
+      (ref-set bullets bn))))
+
+
+;; move players
+;; move bullets
+;; check interactions
+
 
 
 
