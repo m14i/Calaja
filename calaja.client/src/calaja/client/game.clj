@@ -45,13 +45,21 @@
                        (new-player :two 1 (mapv #(-> % (/ 2) (+ 100)) bounds))])]
     (Game. bounds players bullets)))
 
+(defn process-hit [player bullets]
+  (let [pbox (get-bbox player)
+        bboxes (map get-bbox bullets)]
+    (if (some #(.intersects pbox %) bboxes)
+      (update-in player [:energy ] dec)
+      player)))
+
 
 (defn step-players [players bullets actions bounds dt]
   (map #(let [[p a] %]
           (-> p
             (update-player a)
             (move bounds dt)
-            (process-hit bullets)))
+            ;(process-hit bullets)
+            ))
     (map vector players actions)))
 
 
@@ -71,12 +79,6 @@
     (swap! players step-players @bullets actions bounds dt)
     (swap! bullets step-bullets @players bounds dt)))
 
-;(defn process-hit [player bullets]
-;  (let [pbox (get-bbox player)
-;        bboxes (map get-bbox bullets)]
-;    (if (some #(.intersects pbox %) bboxes)
-;      (update-in player [:energy ] dec)
-;      player)))
 
 ;; move players
 ;; move bullets
@@ -105,7 +107,10 @@
     [(min-key :energy (map first res)) (mapv second res)]))
 
 
-
+(defn step-interactions [players bullets]
+  (let [res (mapcat #(bla % bullets) players)
+        bs (map rest res)]
+    [(map first res) (map #(apply min-key :energy %) (apply map vector bs))]))
 
 
 
