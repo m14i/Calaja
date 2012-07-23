@@ -46,25 +46,20 @@
     (Game. bounds players bullets)))
 
 
-(defn process-hit [player bullets]
-  (let [pbox (get-bbox player)
-        bboxes (map get-bbox bullets)]
-    (if (some #(.intersects pbox %) bboxes)
-      (update-in player [:energy ] dec)
-      player)))
-
-
 (defn interact [player bullet]
-  (if (and
-        (< 0 (:alive bullet))
-        (< 0 (:energy bullet)))
-    (let [pbox (get-bbox player)
-          bbox (get-bbox bullet)]
-      (if (.intersects pbox bbox)
-        [(update-in player [:energy ] dec)
-         (update-in bullet [:energy ] dec)]
-        [player bullet]))
-    [player bullet]))
+  (let [x 0]
+    (println "===================" player)
+    (println "===================" bullet)
+    (if (and
+          (< 0 (:alive bullet))
+          (< 0 (:energy bullet)))
+      (let [pbox (get-bbox player)
+            bbox (get-bbox bullet)]
+        (if (.intersects pbox bbox)
+          [(update-in player [:energy ] dec)
+           (update-in bullet [:energy ] dec)]
+          [player bullet]))
+      [player bullet])))
 
 
 (defn apply-in [fn ks & m]
@@ -72,14 +67,25 @@
 
 
 (defn bla [player bullets]
-  (let [res (map interact (repeat player) bullets)]
-    [(min-key :energy (map first res)) (mapv second res)]))
+  (if (empty? bullets)
+    [player bullets]
+    (let [res (map interact (repeat player) bullets)]
+      (println "++++res " res)
+      (println "++++player " player)
+      (println "++++bullets " bullets)
+      [(min-key :energy (map first res)) (mapv second res)])))
 
 
 (defn step-interactions [players bullets]
-  (let [res (mapcat #(bla % bullets) players)
-        bs (map rest res)]
-    [(map first res) (map #(apply min-key :energy %) (apply map vector bs))]))
+  (let [res (map #(bla % bullets) players)
+        bs (map rest res)
+        ret [(map first res)
+             (map #(apply min-key :energy %) (apply map vector bs))]]
+    (println "----------------players " players)
+    (println "----------------bullets " bullets)
+    (println "----------------res " res)
+    (println "----------------ret " ret)
+    ret))
 
 
 (defn step-players [players bullets actions bounds dt]
@@ -105,20 +111,13 @@
 
 (defn step-game [game actions dt]
   (let [{:keys [bounds players bullets]} game
-        ps (step-players players @bullets actions bounds dt)
-        bs (step-bullets bullets @players bounds dt)
+        ps (step-players @players @bullets actions bounds dt)
+        bs (step-bullets @bullets @players bounds dt)
         [pn bn] (step-interactions ps bs)]
 
     (dosync
       (ref-set players pn)
       (ref-set bullets bn))))
-
-
-;; move players
-;; move bullets
-;; check interactions
-
-
 
 
 

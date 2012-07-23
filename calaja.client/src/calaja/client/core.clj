@@ -11,18 +11,18 @@
                        RenderingHints/KEY_ANTIALIASING
                        RenderingHints/VALUE_ANTIALIAS_ON))
 
-(def key-actions {:one {KeyEvent/VK_UP    :thrust
-                        KeyEvent/VK_LEFT  :left
+(def key-actions {:one {KeyEvent/VK_UP :thrust
+                        KeyEvent/VK_LEFT :left
                         KeyEvent/VK_RIGHT :right
-                        KeyEvent/VK_DOWN  :shoot}
+                        KeyEvent/VK_DOWN :shoot}
                   :two {KeyEvent/VK_W :thrust
                         KeyEvent/VK_A :left
                         KeyEvent/VK_D :right
                         KeyEvent/VK_S :shoot}})
 
 
-(def game-delay (atom 20))
-(def keys-held  (atom #{}))
+(def game-delay (atom 5000))
+(def keys-held (atom #{}))
 
 (def game (new-game [800 800]))
 
@@ -44,8 +44,11 @@
 
 
 (defn render [g]
-  (doseq [p @(:players game)] (draw p g))
-  (doseq [b @(:bullets game)] (draw b g)))
+  (let [sprites (concat @(:players game) @(:bullets game))]
+    (doseq [sprite sprites]
+      (println "::::::::::::" sprite)
+      (draw sprite g))))
+
 
 
 (defn step [dt]
@@ -84,7 +87,7 @@
             (catch Exception e (.printStackTrace e)))
           (.repaint this)
           (let [elapsed (- (now) ti)
-                sleep   (max 2 (- @game-delay elapsed))]
+                sleep (max 2 (- @game-delay elapsed))]
             (Thread/sleep sleep)
             (recur tj)))))))
 
@@ -93,11 +96,11 @@
   (let [canvas (new-canvas)
         [width height] (:bounds game)]
     (doto canvas
-          (.setFocusable true)
-          (.addKeyListener canvas)
-          (.setSize width height)
-          (.setVisible true)
-          (.createBufferStrategy 2))))
+      (.setFocusable true)
+      (.addKeyListener canvas)
+      (.setSize width height)
+      (.setVisible true)
+      (.createBufferStrategy 2))))
 
 
 (defn -main [& args]
