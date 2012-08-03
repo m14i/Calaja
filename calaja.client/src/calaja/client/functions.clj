@@ -5,12 +5,6 @@
            [java.awt.geom AffineTransform Path2D Ellipse2D]))
 
 
-(defn splat [x & xs]
-  (do
-    (apply println xs)
-    x))
-
-
 (defn to-cartesian [magnitude angle]
   [(-> angle Math/sin - (* magnitude))
    (-> angle Math/cos (* magnitude))])
@@ -18,29 +12,6 @@
 
 (defn get-bbox [has-element]
   (.getBounds (-> has-element :element :tshape )))
-
-
-(defn process-hit [player bullets]
-  (let [pbox (get-bbox player)
-        bboxes (map get-bbox bullets)]
-    (if (some #(.intersects pbox %) bboxes)
-      (update-in player [:energy ] dec)
-      player)))
-
-
-(defn update-player [player actions]
-  (reduce
-    #(case %2
-       :shoot (assoc-in %1 [:shoot ] true)
-       :thrust (assoc-in %1 [:element :thrust ] 0.0005)
-       :right (assoc-in %1 [:element :spin ] 0.01)
-       :left (assoc-in %1 [:element :spin ] -0.01)
-       %1)
-    (-> player
-      (assoc-in [:element :spin ] 0)
-      (assoc-in [:element :thrust ] 0)
-      (assoc-in [:shoot ] false))
-    actions))
 
 
 (defn cap [x xmax]
@@ -104,34 +75,13 @@
 
 
 (defn new-path [xs ys]
-  (let [points (map vector xs ys)
-        [x0 y0] (map first points)
-        lines (rest points)
-        path (java.awt.geom.Path2D$Double.)]
+  (let [points    (map vector xs ys)
+        [x0 y0]   (map first points)
+        lines     (rest points)
+        path      (java.awt.geom.Path2D$Double.)]
     (.moveTo path x0 y0)
     (doseq [[xn yn] lines] (.lineTo path xn yn))
     (.closePath path)
     path))
-
-
-(defn new-ship [size]
-  (letfn [(scale [x] (->> 2 Math/sqrt (/ 1) (* size x)))]
-    (new-path
-      (map scale [0 3 2 1 0 -1 -2 -3])
-      (map scale [2 -1 -2 -1 -2 -1 -2 -1]))))
-
-
-(defn new-bullet [player]
-  (let [element (:element player)
-        v (to-cartesian 1 (:angle element))
-        source (mapv #(* 30 %) v)
-        [x y] (mapv + source (:point element))
-        circle (java.awt.geom.Ellipse2D$Float. 0 0 5 5)]
-    (Bullet. player 1 1000 (Element. [x y] 0 v 0 0 circle circle))))
-
-
-(defn new-player [name energy point]
-  (let [shape (new-ship 10)]
-    (Player. name energy false nil (Element. point 0 [0 0] 0 0 shape shape))))
 
 

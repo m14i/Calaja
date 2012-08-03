@@ -11,14 +11,14 @@
                        RenderingHints/KEY_ANTIALIASING
                        RenderingHints/VALUE_ANTIALIAS_ON))
 
-(def key-actions {:one {KeyEvent/VK_UP :thrust
-                        KeyEvent/VK_LEFT :left
+(def key-actions {:one {KeyEvent/VK_UP    :thrust
+                        KeyEvent/VK_LEFT  :left
                         KeyEvent/VK_RIGHT :right
-                        KeyEvent/VK_DOWN :shoot}
-                  :two {KeyEvent/VK_W :thrust
-                        KeyEvent/VK_A :left
-                        KeyEvent/VK_D :right
-                        KeyEvent/VK_S :shoot}})
+                        KeyEvent/VK_DOWN  :shoot}
+                  :two {KeyEvent/VK_W     :thrust
+                        KeyEvent/VK_A     :left
+                        KeyEvent/VK_D     :right
+                        KeyEvent/VK_S     :shoot}})
 
 
 (def game-delay (atom 20))
@@ -36,11 +36,11 @@
     (->> events keys set (intersection key-events) (map events))))
 
 
-(defn process-delay-keys [keys]
+(defn get-delay-fn [keys]
   (cond
     (keys KeyEvent/VK_EQUALS) dec
-    (keys KeyEvent/VK_MINUS) inc
-    :else identity))
+    (keys KeyEvent/VK_MINUS)  inc
+    :else                     identity))
 
 
 (defn render [g]
@@ -49,10 +49,11 @@
       (draw sprite g))))
 
 
-
 (defn step [dt]
-  (let [actions (map #(get-actions % @keys-held) @(:players game))]
-    (swap! game-delay (process-delay-keys @keys-held))
+  (let [players   @(:players game)
+        actions   (map #(get-actions % @keys-held) players)
+        delay-fn  (get-delay-fn @keys-held)]
+    (swap! game-delay delay-fn)
     (step-game game actions dt)))
 
 
@@ -81,9 +82,7 @@
       (loop [ti (now)]
         (let [tj (now)
               dt (- tj ti)]
-          ;(try
-            (step dt)
-           ; (catch Exception e (.printStackTrace e)))
+          (step dt)
           (.repaint this)
           (let [elapsed (- (now) ti)
                 sleep (max 2 (- @game-delay elapsed))]
