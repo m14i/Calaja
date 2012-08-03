@@ -4,7 +4,7 @@
         [clojure.set])
   (:import [java.awt RenderingHints]
            [java.awt.event KeyListener KeyEvent]
-           [javax.swing JFrame SwingUtilities]))
+           [javax.swing JFrame SwingUtilities JPanel]))
 
 
 (def rendering-hints (RenderingHints.
@@ -59,7 +59,7 @@
 
 (defn new-canvas []
 
-  (proxy [JFrame KeyListener Runnable] []
+  (proxy [JPanel KeyListener Runnable] []
 
     (paint [g]
       (proxy-super paint g)
@@ -91,14 +91,19 @@
 
 
 (defn start-game []
-  (let [canvas (new-canvas)
+  (let [frame (JFrame. "Calaja")
+        canvas (new-canvas)
         [width height] (:bounds game)]
     (doto canvas
+      (.setDoubleBuffered true)
       (.setFocusable true)
       (.addKeyListener canvas)
       (.setSize width height)
-      (.setVisible true)
-      (.createBufferStrategy 2))))
+      (.setVisible true))
+    (doto frame
+      (.setSize width height)
+      (.setContentPane canvas)
+      (.setVisible true))))
 
 
 (defn -main [& args]
