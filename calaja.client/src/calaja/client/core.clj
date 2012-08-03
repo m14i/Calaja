@@ -21,7 +21,7 @@
                         KeyEvent/VK_S :shoot}})
 
 
-(def game-delay (atom 5000))
+(def game-delay (atom 20))
 (def keys-held (atom #{}))
 
 (def game (new-game [800 800]))
@@ -46,7 +46,6 @@
 (defn render [g]
   (let [sprites (concat @(:players game) @(:bullets game))]
     (doseq [sprite sprites]
-      (println "::::::::::::" sprite)
       (draw sprite g))))
 
 
@@ -82,9 +81,9 @@
       (loop [ti (now)]
         (let [tj (now)
               dt (- tj ti)]
-          (try
+          ;(try
             (step dt)
-            (catch Exception e (.printStackTrace e)))
+           ; (catch Exception e (.printStackTrace e)))
           (.repaint this)
           (let [elapsed (- (now) ti)
                 sleep (max 2 (- @game-delay elapsed))]
@@ -105,3 +104,5 @@
 
 (defn -main [& args]
   (SwingUtilities/invokeLater start-game))
+
+(-main)

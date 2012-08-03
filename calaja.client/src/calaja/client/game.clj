@@ -48,8 +48,6 @@
 
 (defn interact [player bullet]
   (let [x 0]
-    (println "===================" player)
-    (println "===================" bullet)
     (if (and
           (< 0 (:alive bullet))
           (< 0 (:energy bullet)))
@@ -69,22 +67,19 @@
 (defn bla [player bullets]
   (if (empty? bullets)
     [player bullets]
-    (let [res (map interact (repeat player) bullets)]
-      (println "++++res " res)
-      (println "++++player " player)
-      (println "++++bullets " bullets)
-      [(min-key :energy (map first res)) (mapv second res)])))
+    (let [result (map interact (repeat player) bullets)
+          updated-player (apply min-key :energy (map first result))
+          updated-bullets (mapv second result)]
+      (println result)
+      [updated-player updated-bullets])))
 
 
 (defn step-interactions [players bullets]
-  (let [res (map #(bla % bullets) players)
-        bs (map rest res)
-        ret [(map first res)
-             (map #(apply min-key :energy %) (apply map vector bs))]]
-    (println "----------------players " players)
-    (println "----------------bullets " bullets)
-    (println "----------------res " res)
-    (println "----------------ret " ret)
+  (let [result (map #(bla % bullets) players)
+        bs (map second result)
+        updated-players (map first result)
+        updated-bullets (map #(apply min-key :energy %) (apply map vector bs))
+        ret [updated-players updated-bullets]]
     ret))
 
 
@@ -92,9 +87,7 @@
   (map #(let [[p a] %]
           (-> p
             (update-player a)
-            (move bounds dt)
-            ;(process-hit bullets)
-            ))
+            (move bounds dt)))
     (map vector players actions)))
 
 
