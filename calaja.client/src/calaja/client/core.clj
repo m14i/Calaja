@@ -2,7 +2,7 @@
   (:use [calaja.client.game]
         [calaja.client.render]
         [clojure.set])
-  (:import [java.awt RenderingHints]
+  (:import [java.awt RenderingHints Dimension]
            [java.awt.event KeyListener KeyEvent]
            [javax.swing JFrame SwingUtilities JPanel]))
 
@@ -43,12 +43,6 @@
     :else                     identity))
 
 
-(defn render [g]
-  (let [sprites (concat @(:players game) @(:bullets game))]
-    (doseq [sprite sprites]
-      (draw sprite g))))
-
-
 (defn step [dt]
   (let [players   @(:players game)
         actions   (map #(get-actions % @keys-held) players)
@@ -64,7 +58,7 @@
     (paint [g]
       (proxy-super paint g)
       (.setRenderingHints g rendering-hints)
-      (render g))
+      (draw game g))
 
     (keyTyped [_])
 
@@ -98,11 +92,11 @@
       (.setDoubleBuffered true)
       (.setFocusable true)
       (.addKeyListener canvas)
-      (.setSize width height)
+      (.setPreferredSize (Dimension. width height))
       (.setVisible true))
     (doto frame
-      (.setSize width height)
       (.setContentPane canvas)
+      (.pack)
       (.setVisible true))))
 
 

@@ -1,7 +1,7 @@
 (ns calaja.client.render
   (:use [calaja.client.functions])
   (:require [calaja.client.model])
-  (:import [calaja.client.model Element Player Bullet]
+  (:import [calaja.client.model Game Element Player Bullet]
            [java.awt Font]))
 
 
@@ -35,3 +35,11 @@
       (.setFont     g  (Font. Font/SANS_SERIF Font/BOLD 10))
       (.drawString  g  (name (:name this)) xt yt)
       (.drawString  g  (str energy) xt (+ yt 10)))))
+
+
+(extend-type Game
+  ISprite
+  (draw [this g]
+    (let [sprites (concat @(:players this) @(:bullets this))]
+      (doseq [sprite sprites]
+        (draw sprite g)))))
