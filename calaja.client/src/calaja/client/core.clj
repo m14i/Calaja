@@ -2,7 +2,7 @@
   (:use [calaja.client.game]
         [calaja.client.render]
         [clojure.set])
-  (:import [java.awt RenderingHints Dimension]
+  (:import [java.awt RenderingHints Dimension Frame Toolkit]
            [java.awt.event KeyListener KeyEvent]
            [javax.swing JFrame SwingUtilities JPanel]))
 
@@ -20,11 +20,14 @@
                         KeyEvent/VK_D     :right
                         KeyEvent/VK_S     :shoot}})
 
-
 (def game-delay (atom 20))
 (def keys-held (atom #{}))
 
-(def game (new-game [800 800]))
+(def game
+  (let [screen  (-> (Toolkit/getDefaultToolkit) .getScreenSize)
+        width   (-> screen .getWidth int)
+        height  (-> screen .getHeight int)]
+    (new-game [width height])))
 
 
 (defn now []
@@ -95,6 +98,8 @@
       (.setPreferredSize (Dimension. width height))
       (.setVisible true))
     (doto frame
+      (.setUndecorated true)
+      (.setExtendedState Frame/MAXIMIZED_BOTH)
       (.setContentPane canvas)
       (.pack)
       (.setVisible true))))
