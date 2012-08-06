@@ -1,6 +1,7 @@
 (ns calaja.client.game
   (:use [calaja.client.functions]
-        [calaja.client.model])
+        [calaja.client.model]
+        [clojure.pprint])
   (:require [calaja.client.model])
   (:import [calaja.client.model Element Player Bullet Game]))
 
@@ -52,8 +53,8 @@
   (move [this limits dt]))
 
 
-(defprotocol IShoot
-  (shoot [this])
+(defprotocol IActor
+  (act [this action])
   (shooting? [this]))
 
 
@@ -103,10 +104,22 @@
   (move [this limits dt]
     (update-in this [:element ] move limits dt))
 
-  IShoot
+  IActor
 
-  (shoot [this]
-    (new-bullet this))
+  (act [this actions]
+    (let [reset-player (-> this
+                          (assoc-in [:element :spin ] 0)
+                          (assoc-in [:element :thrust ] 0))]
+      (reduce
+        (fn [player action]
+          (case action
+            :shoot  (update-in  player [:shootDelay ]       #(if (zero? %) ship-shoot-time %))
+            :thrust (assoc-in   player [:element :thrust ]  ship-thrust)
+            :right  (assoc-in   player [:element :spin ]    ship-spinr)
+            :left   (assoc-in   player [:element :spin ]    ship-spinl)
+            player))
+        reset-player
+        actions)))
 
   (shooting? [this]
     (= ship-shoot-time (:shootDelay this)))
@@ -122,22 +135,6 @@
 
 
 ;; game logic ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-(defn apply-action [player action]
-  (case action
-    :shoot  (update-in player [:shootDelay ]       #(if (zero? %) ship-shoot-time %))
-    :thrust (assoc-in  player [:element :thrust ]  ship-thrust )
-    :right  (assoc-in  player [:element :spin ]    ship-spinr)
-    :left   (assoc-in  player [:element :spin ]    ship-spinl)
-    player))
-
-
-(defn act [player actions]
-  (let [reset-player (-> player
-                        (assoc-in [:element :spin ]   0)
-                        (assoc-in [:element :thrust ] 0))]
-    (reduce apply-action reset-player actions)))
 
 
 (defn interact [player bullet]
@@ -185,7 +182,7 @@
                        (move bounds dt))))
          (->> players
            (filter  shooting?)
-           (map     shoot)))))
+           (map     new-bullet)))))
 
 
 ;; public ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
