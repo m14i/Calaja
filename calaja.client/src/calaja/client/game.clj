@@ -15,7 +15,7 @@
 (def ship-energy      20)
 
 
-;; constuctors ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; constructors ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 (defn new-ship [size]
@@ -53,14 +53,22 @@
 
 
 (defprotocol IShoot
-  (shoot [this]))
+  (shoot [this])
+  (shooting? [this]))
+
+
+(defprotocol IAge
+  (age [this dt])
+  (alive? [this]))
 
 
 ;; extensions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 (extend-type Element
+
   IMove
+
   (move [this bounds dt]
     (-> this
       (rotate dt)
@@ -71,19 +79,46 @@
 
 
 (extend-type Bullet
+
   IMove
+
   (move [this limits dt]
-    (update-in this [:element ] move limits dt)))
+    (update-in this [:element ] move limits dt))
+
+  IAge
+
+  (age [this dt]
+    (update-in this [:alive ] - dt))
+
+  (alive? [this]
+    (and
+      (< 0 (:alive this))
+      (< 0 (:energy this)))))
 
 
 (extend-type Player
+
   IMove
+
   (move [this limits dt]
     (update-in this [:element ] move limits dt))
 
   IShoot
+
   (shoot [this]
-    (new-bullet this)))
+    (new-bullet this))
+
+  (shooting? [this]
+    (= ship-shoot-time (:shootDelay this)))
+
+  IAge
+
+  (age [this dt]
+    (update-in this [:shootDelay] #(max 0 (- % dt))))
+
+  (alive? [this]
+    (< 0 (:energy this))))
+
 
 
 ;; game logic ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -122,10 +157,6 @@
       [updated-player updated-bullets])))
 
 
-(defn age [player dt]
-  (update-in player [:shootDelay] #(max 0 (- % dt))))
-
-
 (defn step-interactions [players bullets]
   (let [result          (map #(hit-player % bullets) players)
         updated-players (map first result)
@@ -134,7 +165,7 @@
 
 
 (defn step-players [players bullets actions bounds dt]
-  (let [alive-players (filter #(< 0 (:energy %)) players)]
+  (let [alive-players (filter alive? players)]
     (map
       (fn [player action]
         (-> player
@@ -148,12 +179,13 @@
 (defn step-bullets [bullets players bounds dt]
   (vec (concat
          (->> bullets
-           (filter  #(< 0 (:alive %)))
-           (filter  #(< 0 (:energy %)))
-           (map     #(move (update-in % [:alive ] - dt) bounds dt)))
+           (filter  alive?)
+           (map     #(-> %
+                       (age dt)
+                       (move bounds dt))))
          (->> players
-           (filter  #(= ship-shoot-time (:shootDelay %)))
-           (map shoot)))))
+           (filter  shooting?)
+           (map     shoot)))))
 
 
 ;; public ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
