@@ -5,24 +5,24 @@
            [java.awt Font]))
 
 
-(defprotocol ISprite
+(defprotocol IDrawable
   (draw [this g]))
 
 
 (extend-type Element
-  ISprite
+  IDrawable
   (draw [this g]
     (.draw g (:tshape this))))
 
 
 (extend-type Bullet
-  ISprite
+  IDrawable
   (draw [this g]
     (draw (:element this) g)))
 
 
 (extend-type Player
-  ISprite
+  IDrawable
   (draw [this g]
     (let [element (:element this)
           [x y]   (mapv int (:point element))
@@ -38,7 +38,7 @@
 
 
 (extend-type Game
-  ISprite
+  IDrawable
   (draw [this g]
     (let [sprites (concat @(:players this) @(:bullets this))]
       (doseq [sprite sprites]
