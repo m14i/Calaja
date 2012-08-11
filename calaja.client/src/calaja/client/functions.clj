@@ -49,7 +49,7 @@
 
   ([shape point angle]
     (let [[x y] point
-          at (AffineTransform.)]
+          at    (AffineTransform.)]
       (.translate at x y)
       (.rotate at angle)
       (.createTransformedShape at shape))))

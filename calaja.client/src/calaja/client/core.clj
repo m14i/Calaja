@@ -2,9 +2,12 @@
   (:use [calaja.client.game]
         [calaja.client.render]
         [clojure.set])
-  (:import [java.awt RenderingHints Dimension Frame Toolkit]
+  (:import [java.awt RenderingHints Dimension Frame Toolkit Graphics2D]
            [java.awt.event KeyListener KeyEvent]
            [javax.swing JFrame SwingUtilities JPanel]))
+
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* true)
 
 
 (def rendering-hints (RenderingHints.
@@ -20,7 +23,7 @@
                         KeyEvent/VK_D     :right
                         KeyEvent/VK_S     :shoot}})
 
-(def game-delay (atom 20))
+(def game-delay (atom 10))
 (def keys-held (atom #{}))
 
 (def game
@@ -54,33 +57,33 @@
     (step-game game actions dt)))
 
 
-(defn new-canvas []
+(defn ^JPanel new-canvas []
 
   (proxy [JPanel KeyListener Runnable] []
 
     (paint [g]
-      (proxy-super paint g)
-      (.setRenderingHints g rendering-hints)
+      (let [^JPanel this this] (proxy-super paint g))
+      (.setRenderingHints ^Graphics2D g rendering-hints)
       (draw game g))
 
     (keyTyped [_])
 
     (keyReleased [ev]
-      (swap! keys-held disj (.getKeyCode ev)))
+      (swap! keys-held disj (.getKeyCode ^KeyEvent ev)))
 
     (keyPressed [ev]
-      (swap! keys-held conj (.getKeyCode ev)))
+      (swap! keys-held conj (.getKeyCode ^KeyEvent ev)))
 
     (addNotify []
-      (proxy-super addNotify)
-      (.start (Thread. this)))
+      (let [^JPanel this this] (proxy-super addNotify))
+      (.start (Thread. ^Runnable this)))
 
     (run []
       (loop [ti (now)]
         (let [tj (now)
               dt (- tj ti)]
           (step dt)
-          (.repaint this)
+          (.repaint ^JPanel this)
           (let [elapsed (- (now) ti)
                 sleep (max 2 (- @game-delay elapsed))]
             (Thread/sleep sleep)

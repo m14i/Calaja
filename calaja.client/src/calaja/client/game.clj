@@ -9,11 +9,11 @@
 ;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(def ship-shoot-time  200)
-(def ship-thrust      0.0005)
-(def ship-spinr       0.01)
-(def ship-spinl       (- ship-spinr))
-(def ship-energy      20)
+(def ^:const ship-shoot-time  200)
+(def ^:const ship-thrust      0.0005)
+(def ^:const ship-spinr       0.005)
+(def ^:const ship-spinl       (- ship-spinr))
+(def ^:const ship-energy      20)
 
 
 ;; constructors ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -131,7 +131,6 @@
 
   (alive? [this]
     (< 0 (:energy this))))
-
 
 
 ;; game logic ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
