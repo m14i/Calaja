@@ -10,9 +10,8 @@
 (set! *unchecked-math* true)
 
 
-(def rendering-hints (RenderingHints.
-                       RenderingHints/KEY_ANTIALIASING
-                       RenderingHints/VALUE_ANTIALIAS_ON))
+(def rendering-hints (RenderingHints. RenderingHints/KEY_ANTIALIASING
+                                      RenderingHints/VALUE_ANTIALIAS_ON))
 
 (def key-actions {:one {KeyEvent/VK_UP    :thrust
                         KeyEvent/VK_LEFT  :left
@@ -23,8 +22,10 @@
                         KeyEvent/VK_D     :right
                         KeyEvent/VK_S     :shoot}})
 
+
 (def game-delay (atom 10))
 (def keys-held (atom #{}))
+
 
 (def game
   (let [screen  (-> (Toolkit/getDefaultToolkit) .getScreenSize)
@@ -43,15 +44,14 @@
 
 
 (defn get-delay-fn [keys]
-  (cond
-    (keys KeyEvent/VK_EQUALS) dec
-    (keys KeyEvent/VK_MINUS)  inc
-    :else                     identity))
+  (cond (keys KeyEvent/VK_EQUALS) dec
+        (keys KeyEvent/VK_MINUS)  inc
+        :else                     identity))
 
 
 (defn step [dt]
-  (let [players   @(:players game)
-        actions   (map #(get-actions % @keys-held) players)
+  (let [players   (:players game)
+        actions   (map #(get-actions % @keys-held) @players)
         delay-fn  (get-delay-fn @keys-held)]
     (swap! game-delay delay-fn)
     (step-game game actions dt)))
@@ -84,7 +84,7 @@
               dt (- tj ti)]
           (step dt)
           (.repaint ^JPanel this)
-          (let [elapsed (- (now) ti)
+          (let [elapsed (- (now) tj)
                 sleep (max 2 (- @game-delay elapsed))]
             (Thread/sleep sleep)
             (recur tj)))))))
@@ -110,5 +110,3 @@
 
 (defn -main [& args]
   (SwingUtilities/invokeLater start-game))
-
-(-main)

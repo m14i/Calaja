@@ -1,5 +1,6 @@
 (ns calaja.client.render
-  (:use [calaja.client.functions])
+  (:use [calaja.client.functions]
+        [calaja.client.model])
   (:require [calaja.client.model])
   (:import [calaja.client.model Game Element Player Bullet]
            [java.awt Font]))
@@ -25,21 +26,33 @@
   IDrawable
   (draw [this g]
     (let [element (:element this)
-          [x y]   (mapv int (:point element))
+          {:keys [point angle]} element
+          {:keys [x y]} point
+          velocity (cartesian (:velocity element))
           energy  (:energy this)
-          xt      (+ x 20)
-          yt      (- y 30)]
+          xt      (int (+ x 20))
+          yt      (int (- y 30))
+          offset  (if (= :one (:name this)) 10 30)]
 
       (draw element g)
 
       (.setFont     g  (Font. Font/SANS_SERIF Font/BOLD 10))
       (.drawString  g  (name (:name this)) xt yt)
-      (.drawString  g  (str energy) xt (+ yt 10)))))
+      (.drawString  g  (str energy) xt (+ yt 10))
+
+      (.drawString  g (str "["
+                           "vx: " (:x velocity)
+                           " , vy: " (:y velocity)
+                           " , x: " x
+                           " , y: " y
+                           " , a: " angle
+                           "]") 10 (+ offset 10)))))
 
 
 (extend-type Game
   IDrawable
   (draw [this g]
-    (let [sprites (concat @(:players this) @(:bullets this))]
+    (let [sprites (concat @(:players this)
+                          @(:bullets this))]
       (doseq [sprite sprites]
         (draw sprite g)))))

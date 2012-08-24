@@ -1,77 +1,77 @@
 (ns calaja.client.functions
   (:use [calaja.client.model])
   (:require [calaja.client.model])
-  (:import [calaja.client.model Element Player Bullet Game]
+  (:import [calaja.client.model
+            Element Player Bullet Game
+            CartesianCoordinate PolarCoordinate]
            [java.awt.geom AffineTransform Path2D Ellipse2D]))
 
 
-(defn to-cartesian [magnitude angle]
-  [(-> angle Math/sin - (* magnitude))
-   (-> angle Math/cos (* magnitude))])
-
-
 (defn get-bbox [has-element]
-  (.getBounds (-> has-element :element :tshape )))
+  (.getBounds (-> has-element :element :tshape)))
 
-
-(defn cap [x xmax]
-  (let [xmin (* -1 xmax)]
-    (-> x (Math/min xmax) (Math/max xmin))))
 
 (defn accelerate
 
   ([element dt]
-    (let [{:keys [velocity angle thrust]} element]
-      (update-in element [:velocity ] accelerate angle thrust dt)))
+     (let [{:keys [velocity angle thrust]} element]
+       (update-in element [:velocity] accelerate angle thrust dt)))
 
   ([velocity angle thrust dt]
-    (let [dv (* dt thrust)
-          ds (to-cartesian dv angle)]
-      (map + velocity ds))))
+     (if (zero? thrust)
+       velocity
+       (let [dv (* dt thrust)
+             ds (PolarCoordinate. dv angle)]
+         (sum ds velocity)))))
 
 
 (defn rotate
 
   ([element dt]
-    (let [{:keys [angle spin]} element]
-      (update-in element [:angle ] rotate spin dt)))
+     (let [{:keys [angle spin]} element]
+       (update-in element [:angle] rotate spin dt)))
 
   ([angle spin dt]
-    (-> spin (* dt) (+ angle) (rem (* 2 Math/PI)))))
+     (-> spin (* dt) (+ angle) (rem (* 2 Math/PI)))))
 
 
 (defn transform
 
   ([element]
-    (let [{:keys [shape point angle]} element
-          result (transform shape point angle)]
-      (assoc-in element [:tshape ] result)))
+     (let [{:keys [shape point angle]} element
+           result (transform shape point angle)]
+       (assoc-in element [:tshape] result)))
 
   ([shape point angle]
-    (let [[x y] point
-          at    (AffineTransform.)]
-      (.translate at x y)
-      (.rotate at angle)
-      (.createTransformedShape at shape))))
+     (let [{:keys [x y]} (cartesian point)
+           at    (AffineTransform.)]
+       (.translate at x y)
+       (.rotate at (- angle (/ Math/PI 2)))
+       (.createTransformedShape at shape))))
 
 
 (defmulti wrap (fn [x xmax] (class x)))
 
-(defmethod wrap Element [x xmax]
-  (update-in x [:point ] #(mapv wrap % xmax)))
+(defmethod wrap Element [el bounds]
+  (update-in el [:point] (fn [p]
+                           (let [{:keys [x y]} (cartesian p)
+                                 [xmax ymax] bounds]
+                             (CartesianCoordinate. (wrap x xmax)
+                                                   (wrap y ymax))))))
 
-(defmethod wrap :default [x xmax]
-  (-> x (rem xmax) (+ xmax) (rem xmax)))
+(defmethod wrap :default [x bound]
+  (-> x (rem bound) (+ bound) (rem bound)))
 
 
 (defn translate
 
   ([element dt]
-    (update-in element [:point ] translate (:velocity element) dt))
+     (update-in element [:point] translate (:velocity element) dt))
 
   ([point velocity dt]
-    (let [dx (map #(* % dt) velocity)]
-      (map + point dx))))
+     (let [{:keys [radius theta]} (polar velocity)
+           ds (PolarCoordinate. (* dt radius) theta)]
+       (sum point ds))))
 
 
 (defn new-path [xs ys]
@@ -83,5 +83,3 @@
     (doseq [[xn yn] lines] (.lineTo path xn yn))
     (.closePath path)
     path))
-
-
