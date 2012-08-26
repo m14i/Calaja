@@ -53,11 +53,10 @@
 (defmulti wrap (fn [x xmax] (class x)))
 
 (defmethod wrap Element [el bounds]
-  (update-in el [:point] (fn [p]
-                           (let [{:keys [x y]} (cartesian p)
-                                 [xmax ymax] bounds]
-                             (CartesianCoordinate. (wrap x xmax)
-                                                   (wrap y ymax))))))
+  (update-in el [:point] #(let [{:keys [x y]} (cartesian %)
+                                [xmax ymax] bounds]
+                            (CartesianCoordinate. (wrap x xmax)
+                                                  (wrap y ymax)))))
 
 (defmethod wrap :default [x bound]
   (-> x (rem bound) (+ bound) (rem bound)))
