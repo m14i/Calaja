@@ -47,8 +47,8 @@
 
   (magnitude [this]
     (let [{:keys [x y]} this]
-      (Math/sqrt (+ (Math/pow x 2)
-                    (Math/pow y 2)))))
+      (Math/sqrt (+ (* x x)
+                    (* y y)))))
 
   (cartesian [this]
     this)
