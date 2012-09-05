@@ -27,7 +27,7 @@
 
 (defn new-ship [size]
   (letfn [(scale [x] (->> 2 Math/sqrt (/ 1) (* size x)))]
-    (new-path (map scale [0 3 2 1 0 -1 -2 -3])
+    (new-path (map scale [0  3  2  1  0 -1 -2 -3])
               (map scale [2 -1 -2 -1 -2 -1 -2 -1]))))
 
 
@@ -51,7 +51,7 @@
   (let [[x y] (mapv #(/ % 2) bounds)
         players [(new-player :one ship-energy x y)
                  (new-player :two ship-energy (+ x 100) (+ y 100))]]
-    (Game. bounds (ref players) (ref []))))
+    (Game. bounds (atom players) (atom []))))
 
 
 ;; protocols ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -144,22 +144,19 @@
 
 (defn interact [player bullet]
   (let [pbox  (get-bbox player)
-        bbox  (get-bbox bullet)
-        dfn   (if (.intersects pbox bbox) dec identity)]
-    [(update-in player [:energy] dfn)
-     (update-in bullet [:energy] dfn)]))
+        bbox  (get-bbox bullet)]
+    (if (.intersects pbox bbox) 1 0)))
 
 
 (defn hit-player [player bullets]
-  (if (empty? bullets)
-    [player bullets]
-    (let [result          (map interact (repeat player) bullets)
-          updated-player  (apply min-key :energy (map first result))
-          updated-bullets (map second result)]
-      [updated-player updated-bullets])))
+  (let [result          (map interact (repeat player) bullets)
+        lost-energy     (apply + result)
+        updated-player  (update-in player [:energy] - lost-energy)
+        updated-bullets (map #(update-in %1 [:energy] - %2) bullets result)]
+    [updated-player updated-bullets]))
 
 
-(defn step-interactions [players bullets]
+(defn step-interactions [players bullets]  
   (let [result          (map #(hit-player % bullets) players)
         updated-players (map first result)
         updated-bullets (map #(apply min-key :energy %) (apply map vector (map second result)))]
@@ -185,12 +182,11 @@
 
 
 (defn step-bullets [bullets players bounds dt]
-  (concat (->> bullets
-               (filter alive?)
-               (map    #(-> % (age dt) (move bounds dt))))
-          (->> players
-               (filter shooting?)
-               (map    new-bullet))))
+  (let [alive-bullets (filter alive? bullets)
+        new-bullets (->> players (filter shooting?) (map new-bullet))
+        all-bullets (concat alive-bullets new-bullets)]
+    (map #(-> % (age dt) (move bounds dt)) all-bullets)))
+          
 
 
 ;; public ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -198,9 +194,9 @@
 
 (defn step-game [game actions dt]
   (let [{:keys [bounds players bullets]}  game
-        moved-players                     (step-players @players @bullets actions bounds dt)
-        moved-bullets                     (step-bullets @bullets @players bounds dt)
-        [updated-players updated-bullets] (step-interactions moved-players moved-bullets)]
-
-    (dosync (ref-set players updated-players)
-            (ref-set bullets updated-bullets))))
+        moved-bullets (future (step-bullets @bullets @players bounds dt))
+        moved-players (future (step-players @players @bullets actions bounds dt))
+        [next-players next-bullets] (step-interactions @moved-players @moved-bullets)]
+    
+    (reset! players next-players)
+    (reset! bullets next-bullets)))

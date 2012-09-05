@@ -23,7 +23,7 @@
                         KeyEvent/VK_S     :shoot}})
 
 
-(def game-delay (atom 10))
+(def game-delay (atom 17))
 (def keys-held (atom #{}))
 
 

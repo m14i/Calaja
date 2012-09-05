@@ -40,7 +40,7 @@
       (.drawString  g  (name (:name this)) xt yt)
       (.drawString  g  (str energy) xt (+ yt 10))
 
-      (.drawString  g (str "["
+      #_(.drawString  g (str "["
                            "vx: " (:x velocity)
                            " , vy: " (:y velocity)
                            " , x: " x
