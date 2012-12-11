@@ -1,9 +1,9 @@
 (ns calaja.client.functions
   (:use [calaja.client.model])
-  (:require [calaja.client.model])
+  (:require [calaja.client.model]
+            [calaja.client.coordinate :refer :all])
   (:import [calaja.client.model
-            Element Player Bullet Game
-            CartesianCoordinate PolarCoordinate]
+            Element Player Bullet Game]
            [java.awt.geom AffineTransform Path2D Ellipse2D]))
 
 
@@ -21,7 +21,7 @@
      (if (zero? thrust)
        velocity
        (let [dv (* dt thrust)
-             ds (PolarCoordinate. dv angle)]
+             ds (polar dv angle)]
          (sum ds velocity)))))
 
 
@@ -43,8 +43,9 @@
        (assoc-in element [:tshape] result)))
 
   ([shape point angle]
-     (let [{:keys [x y]} (cartesian point)
-           at    (AffineTransform.)]
+     (let [x  (xval point)
+           y  (yval point)
+           at (AffineTransform.)]
        (.translate at x y)
        (.rotate at (- angle (/ Math/PI 2)))
        (.createTransformedShape at shape))))
@@ -53,10 +54,9 @@
 (defmulti wrap (fn [x xmax] (class x)))
 
 (defmethod wrap Element [el bounds]
-  (update-in el [:point] #(let [{:keys [x y]} (cartesian %)
-                                [xmax ymax] bounds]
-                            (CartesianCoordinate. (wrap x xmax)
-                                                  (wrap y ymax)))))
+  (update-in el [:point] #(let [[xmax ymax] bounds]
+                            (cartesian (wrap (xval %) xmax)
+                                       (wrap (yval %) ymax)))))
 
 (defmethod wrap :default [x bound]
   (-> x (rem bound) (+ bound) (rem bound)))
@@ -68,8 +68,9 @@
      (update-in element [:point] translate (:velocity element) dt))
 
   ([point velocity dt]
-     (let [{:keys [radius theta]} (polar velocity)
-           ds (PolarCoordinate. (* dt radius) theta)]
+     (let [radius (norm velocity)
+           theta  (angle velocity)
+           ds     (polar (* dt radius) theta)]
        (sum point ds))))
 
 

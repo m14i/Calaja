@@ -1,7 +1,8 @@
 (ns calaja.client.render
   (:use [calaja.client.functions]
         [calaja.client.model])
-  (:require [calaja.client.model])
+  (:require [calaja.client.model]
+            [calaja.client.coordinate :refer :all])
   (:import [calaja.client.model Game Element Player Bullet]
            [java.awt Font]))
 
@@ -27,8 +28,11 @@
   (draw [this g]
     (let [element (:element this)
           {:keys [point angle]} element
-          {:keys [x y]} point
-          velocity (cartesian (:velocity element))
+          x (xval point)
+          y (yval point)
+          vx (xval (:velocity element)) 
+          vy (yval (:velocity element)) 
+          velocity [vx vy]
           energy  (:energy this)
           xt      (int (+ x 20))
           yt      (int (- y 30))

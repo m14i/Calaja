@@ -2,10 +2,10 @@
   (:use [calaja.client.functions]
         [calaja.client.model]
         [clojure.pprint])
-  (:require [calaja.client.model])
+  (:require [calaja.client.model]
+            [calaja.client.coordinate :refer :all])
   (:import [calaja.client.model
-            Element Player Bullet Game
-            PolarCoordinate CartesianCoordinate]))
+            Element Player Bullet Game]))
 
 
 ;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -33,16 +33,16 @@
 
 (defn new-bullet [player]
   (let [{:keys [angle point]} (:element player)
-        ds     (PolarCoordinate. bullet-speed angle)
+        ds     (polar bullet-speed angle)
         offset (+ ship-size (* 3 bullet-radius))
-        source (sum point (PolarCoordinate. offset angle))
+        source (sum point (polar offset angle))
         circle (java.awt.geom.Ellipse2D$Float. 0 0 bullet-radius bullet-radius)]
     (Bullet. 1 1000 (Element. source 0 ds 0 0 circle circle))))
 
 
 (defn new-player [name energy x y]
-  (let [ds (CartesianCoordinate. 0 0)
-        point (CartesianCoordinate. x y)
+  (let [ds    (cartesian 0 0)
+        point (cartesian x y)
         shape (new-ship ship-size)]
     (Player. name energy 0 (Element. point 0 ds 0 0 shape shape))))
 
@@ -164,9 +164,9 @@
 
 
 (defn cap-velocity [player]
-  (update-in player [:element :velocity] #(let [{:keys [radius theta]} (polar %)
-                                                r (min radius ship-max-speed)]
-                                            (PolarCoordinate. r theta))))
+  (update-in player [:element :velocity] 
+    #(let [r (min (norm %) ship-max-speed)]
+      (polar r (angle %)))))
 
 
 (defn step-players [players bullets actions bounds dt]
